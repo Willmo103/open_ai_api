@@ -2,10 +2,14 @@ import os
 import json
 import openai
 import click
+from dotenv import load_dotenv
+
+# load env
+load_dotenv()
 
 # Set the environment variables from .env file
-openai.api_key = os.environ.get("OPENAI_API_KEY")
-openai.organization = os.environ.get("OPENAI_ORG_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.organization = os.getenv("OPENAI_ORG_KEY")
 
 @click.command()
 @click.argument('prompt', type=click.Path(exists=True))
