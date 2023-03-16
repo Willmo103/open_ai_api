@@ -16,15 +16,29 @@ def remove_pwd(path):
         return path
 
 
+def create_directory_structure(data, path):
+    """Create directory structure based on JSON object"""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            new_path = os.path.join(path, str(key))
+            if isinstance(value, str):
+                with open(new_path, "w") as f:
+                    f.write(value)
+            else:
+                os.makedirs(new_path, exist_ok=True)
+                create_directory_structure(value, new_path)
+
+
 @click.command()
 @click.argument("prompt", type=click.Path(exists=True))
 def code_edit(prompt):
     # load env
-    load_dotenv(".env")
+    with open("globals.json", "r") as f:
+        data = json.load(f)
 
     # Set the environment variables from .env file
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    openai.organization = os.getenv("OPENAI_ORG_KEY")
+    openai.api_key = data["API_KEY"]
+    openai.organization = data["ORG_KEY"]
 
     # Read the contents of the prompt file
     with open(prompt, "r") as f:
@@ -32,7 +46,7 @@ def code_edit(prompt):
 
     # Use the OpenAI API to generate code based on the prompt
     response = openai.Completion.create(
-        engine="davinci-codex", prompt=prompt_text, max_tokens=1024, temperature=0.5
+        engine="davinci-codex", prompt=prompt_text, max_tokens=1024, temperature=0.5, n=1,
     )
 
     # Get the generated code from the response
@@ -54,9 +68,11 @@ def code_edit(prompt):
 
 
 @click.command()
-@click.option("--add", is_flag=True, help="Add a file to the ignore list")
-@click.option("--delete", is_flag=True, help="Delete a file from the ignore list")
-@click.option("--list", "list_", is_flag=True, help="List all files in the ignore list")
+@click.option("-a", "--add", is_flag=True, help="Add a file to the ignore list")
+@click.option("-d", "--delete", is_flag=True, help="Delete a file from the ignore list")
+@click.option(
+    "-l", "--list", "list_", is_flag=True, help="List all files in the ignore list"
+)
 def code_edit_ignore(add, delete, list_):
     # Load the JSON file
     with open("globals.json", "r") as f:
@@ -113,12 +129,14 @@ def code_edit_ignore(add, delete, list_):
 
 @click.command()
 @click.option(
+    "-a",
     "--all",
     is_flag=True,
     help="Creates full file structure adding empty dicts for all directories and empty str for all files",
 )
 @click.argument("dir_path", type=click.Path(exists=True))
 def dir_to_json(dir_path, all):
+    """"""
     # Get the directory name from the dir_path argument
     directory_name = os.path.basename(os.path.abspath(dir_path))
 
@@ -198,21 +216,9 @@ consider updating your ignore list by running
     return
 
 
-def create_directory_structure(data, path):
-    """Create directory structure based on JSON object"""
-    if isinstance(data, dict):
-        for key, value in data.items():
-            new_path = os.path.join(path, str(key))
-            if isinstance(value, str):
-                with open(new_path, 'w') as f:
-                    f.write(value)
-            else:
-                os.makedirs(new_path, exist_ok=True)
-                create_directory_structure(value, new_path)
-
 @click.command()
-@click.argument('json_obj', type=click.Path(exists=True))
-@click.argument('path', type=click.Path())
+@click.argument("json_obj", type=click.Path(exists=True))
+@click.argument("path", type=click.Path())
 def generate_directory(json_obj, path):
     """Generate directory structure based on JSON object"""
     with open(json_obj) as f:

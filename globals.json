@@ -11,5 +11,7 @@
     "*egg*",
     "*.json"
   ],
-  "requests": []
+  "requests": [],
+  "API_KEY": "",
+  "ORG_KEY": ""
 }
