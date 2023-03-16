@@ -8,9 +8,10 @@ from dotenv import load_dotenv
 
 
 def remove_pwd(path):
-    pwd = os.getcwd()
+    pwd = os.path.normpath(os.getcwd())
     if path.startswith(pwd):
-        return path[len(pwd) + 1 :]
+        stripped_path = path[len(pwd) + 1 :]
+        return stripped_path
     else:
         return path
 
@@ -89,16 +90,21 @@ def code_edit_ignore(add, delete, list_):
         for i, item in enumerate(ignored_files):
             print(f"{i}: {item}")
         selection = click.prompt("Enter the number of the item to delete", type=int)
+
         if selection < 0 or selection >= len(ignored_files):
             click.echo(f"Invalid selection: {selection}")
+
         else:
             # Confirm with the user before deleting the file from the ignore list
             filename = ignored_files[selection]
+
             if click.confirm(f"Delete {filename} from the ignore list?"):
                 ignored_files.pop(selection)
                 # Update the JSON file
+
                 with open("globals.json", "w") as f:
                     json.dump(data, f, indent=4)
+
     else:
         # No options specified, so just list all files in the ignore list
         for i, item in enumerate(ignored_files):
@@ -106,10 +112,18 @@ def code_edit_ignore(add, delete, list_):
 
 
 @click.command()
+@click.option(
+    "--all",
+    is_flag=True,
+    help="Creates full file structure adding empty dicts for all directories and empty str for all files",
+)
 @click.argument("dir_path", type=click.Path(exists=True))
-def dir_to_json(dir_path):
+def dir_to_json(dir_path, all):
     # Get the directory name from the dir_path argument
-    directory_name = os.path.basename(os.path.normpath(dir_path))
+    directory_name = os.path.basename(os.path.abspath(dir_path))
+
+    # remove the pwd from the path to avoid extra nesting
+    dir_path = remove_pwd(os.path.normpath(dir_path))
 
     # Use the directory name to construct the output file name
     output_file_name = directory_name + "_context.json"
@@ -124,14 +138,19 @@ def dir_to_json(dir_path):
 
     # Traverse the directory and get the file tree
     for root, dirs, files in os.walk(dir_path):
+        # print(root, "\n\n")
         current_dir = file_tree
         # Traverse all the directories in the current directory
-        for directory in root.split(os.path.sep):
+        for directory in os.path.normpath(root).split(os.path.sep):
             ignore_dir = False
             for pattern in ignored_files:
                 if fnmatch.fnmatch(directory, pattern):
                     ignore_dir = True
             if ignore_dir:
+                if all:
+                    current_dir = current_dir.setdefault(
+                        os.path.basename(os.path.abspath(directory)), {}
+                    )
                 break
             current_dir = current_dir.setdefault(
                 os.path.basename(os.path.abspath(directory)), {}
@@ -146,6 +165,8 @@ def dir_to_json(dir_path):
                         ignore_file = True
                         break
                 if ignore_file:
+                    if all:
+                        current_dir[filename] = ""
                     continue
 
                 # Get the full path of the file
@@ -156,8 +177,17 @@ def dir_to_json(dir_path):
                     try:
                         file_contents = f.read()
                     except UnicodeDecodeError as e:
-                        print(filepath)
-                        continue
+                        print(
+                            f"""Encountered an error:
+
+`{e}`
+
+while parsing `{filepath}`.
+consider updating your ignore list by running
+'codex_ignore --add' to add and ignored extension or directory.
+"""
+                        )
+                        return
                 # Add the file contents to the file tree
                 current_dir[filename] = file_contents
 
@@ -166,3 +196,26 @@ def dir_to_json(dir_path):
         json.dump(file_tree, f)
 
     return
+
+
+def create_directory_structure(data, path):
+    """Create directory structure based on JSON object"""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            new_path = os.path.join(path, str(key))
+            if isinstance(value, str):
+                with open(new_path, 'w') as f:
+                    f.write(value)
+            else:
+                os.makedirs(new_path, exist_ok=True)
+                create_directory_structure(value, new_path)
+
+@click.command()
+@click.argument('json_obj', type=click.Path(exists=True))
+@click.argument('path', type=click.Path())
+def generate_directory(json_obj, path):
+    """Generate directory structure based on JSON object"""
+    with open(json_obj) as f:
+        data = json.load(f)
+    create_directory_structure(data, path)
+    click.echo(f"Directory structure generated at {path}")

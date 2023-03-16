@@ -14,7 +14,8 @@ setup(
         'console_scripts': [
             'codex=main:code_edit',
             'codex_ignore=main:code_edit_ignore',
-            'mapfiles=main:dir_to_json'
+            'mapfiles=main:dir_to_json',
+            'generate=main:generate_directory'
         ],
     },
 )
