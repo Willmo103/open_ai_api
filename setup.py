@@ -4,6 +4,7 @@ setup(
     name='codex',
     version='0.1.1',
     py_modules=['main'],
+    data_files=[(".", ['globals.json', '.env'])],
     install_requires=[
         'openai',
         'click',

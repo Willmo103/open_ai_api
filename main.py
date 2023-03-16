@@ -4,16 +4,18 @@ import openai
 import click
 from dotenv import load_dotenv
 
-# load env
-load_dotenv()
 
-# Set the environment variables from .env file
-openai.api_key = os.getenv("OPENAI_API_KEY")
-openai.organization = os.getenv("OPENAI_ORG_KEY")
 
 @click.command()
 @click.argument('prompt', type=click.Path(exists=True))
 def code_edit(prompt):
+    # load env
+    load_dotenv(".env")
+
+    # Set the environment variables from .env file
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    openai.organization = os.getenv("OPENAI_ORG_KEY")
+
     # Read the contents of the prompt file
     with open(prompt, 'r') as f:
         prompt_text = f.read()
@@ -23,7 +25,6 @@ def code_edit(prompt):
         engine="davinci-codex",
         prompt=prompt_text,
         max_tokens=1024,
-        n_top=1,
         temperature=0.5
     )
 
@@ -31,10 +32,16 @@ def code_edit(prompt):
     generated_code = response.choices[0].text.strip()
 
     # Print and save the generated code
-    print(generated_code)
-    with open(prompt+"_copy.json", 'w') as f:
-        json.dump(response, f)
+    # print(generated_code)
+    with open("globals.json", "r") as f:
+        data = json.load(f)
+
+    data['requests'].append(response)
+
+    with open("globals.json", 'w') as f:
+        json.dump(data, f)
 
     # Save the generated code to a file
-    with open(prompt+"_copy", 'w') as f:
+    with open(prompt, 'w') as f:
         f.write(generated_code)
+
