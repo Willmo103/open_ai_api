@@ -6,6 +6,29 @@ import openai
 import click
 from dotenv import load_dotenv
 
+def populate_globals():
+    # keys is a list of all the keys that need to be present in the json object
+    keys = ["ignore", "requests", "API_KEY", "ORG_KEY"]
+    defaults = {"ignore": [], "requests": []}
+
+    # read the object make sure all keys are present
+    try:
+        with open("globals.json", "r") as f:
+            data = json.load(f)
+        assert all(key in data for key in keys)
+        return
+    except (FileNotFoundError, json.JSONDecodeError):
+        print("No globals.json file found, generating globals.json...")
+        data = defaults.copy()
+        data["API_KEY"] = input("Enter your openai API key: 'sk-...'\n> ")
+        data["ORG_KEY"] = input("Enter your openai ORG key: 'org-...'\n> ")
+
+        with open("globals.json", "w") as f:
+            json.dump(data, f, indent=4)
+
+        print("globals.json created:\n", json.dumps(data, indent=4))
+        return
+
 
 def remove_pwd(path):
     pwd = os.path.normpath(os.getcwd())
@@ -32,6 +55,10 @@ def create_directory_structure(data, path):
 @click.command()
 @click.argument("prompt", type=click.Path(exists=True))
 def code_edit(prompt):
+
+    # verify globals.json exists
+    populate_globals()
+
     # load env
     with open("globals.json", "r") as f:
         data = json.load(f)
@@ -40,13 +67,21 @@ def code_edit(prompt):
     openai.api_key = data["API_KEY"]
     openai.organization = data["ORG_KEY"]
 
+    # uncomment to get the list of models saved locally
+    # if openai.api_key:
+    #     data = openai.Model.list()
+    #     with open("models.json", 'w') as f:
+    #         json.dump(data, f, indent=4)
+    #     return
+
     # Read the contents of the prompt file
     with open(prompt, "r") as f:
         prompt_text = f.read()
+    print(prompt_text)
 
     # Use the OpenAI API to generate code based on the prompt
     response = openai.Completion.create(
-        engine="davinci-codex", prompt=prompt_text, max_tokens=1024, temperature=0.5, n=1,
+        engine="code-davinci-001", prompt=prompt_text, max_tokens=1012, temperature=0.2, stop="\n"
     )
 
     # Get the generated code from the response
@@ -58,6 +93,9 @@ def code_edit(prompt):
         data = json.load(f)
 
     data["requests"].append(response)
+    # This will eventually send the request to a database for saving,
+    # for now they will be logged in the globals.json, and a script will populate them into the
+    # database once the connection is ready
 
     with open("globals.json", "w") as f:
         json.dump(data, f)
@@ -65,6 +103,8 @@ def code_edit(prompt):
     # Save the generated code to a file
     with open(prompt, "w") as f:
         f.write(generated_code)
+
+    return
 
 
 @click.command()
@@ -202,7 +242,7 @@ def dir_to_json(dir_path, all):
 
 while parsing `{filepath}`.
 consider updating your ignore list by running
-'codex_ignore --add' to add and ignored extension or directory.
+'codex_ignore --add' to add an ignored extension or directory.
 """
                         )
                         return
