@@ -7,13 +7,17 @@ import click
 from dotenv import load_dotenv
 
 def populate_globals():
+
+    # get the root install path to generate/look for globals.json
+    path: str = os.path.dirname(__file__) + os.path.sep + "globals.json"
+
     # keys is a list of all the keys that need to be present in the json object
-    keys = ["ignore", "requests", "API_KEY", "ORG_KEY"]
-    defaults = {"ignore": [], "requests": []}
+    keys: list = ["ignore", "requests", "API_KEY", "ORG_KEY"]
+    defaults: dict = {"ignore": [], "requests": []}
 
     # read the object make sure all keys are present
     try:
-        with open("globals.json", "r") as f:
+        with open(path, "r") as f:
             data = json.load(f)
         assert all(key in data for key in keys)
         return
@@ -23,7 +27,7 @@ def populate_globals():
         data["API_KEY"] = input("Enter your openai API key: 'sk-...'\n> ")
         data["ORG_KEY"] = input("Enter your openai ORG key: 'org-...'\n> ")
 
-        with open("globals.json", "w") as f:
+        with open(path, "w") as f:
             json.dump(data, f, indent=4)
 
         print("globals.json created:\n", json.dumps(data, indent=4))
@@ -56,6 +60,10 @@ def create_directory_structure(data, path):
 @click.argument("prompt", type=click.Path(exists=True))
 def code_edit(prompt):
 
+    # I was having trouble trying to pull the variables from the .env file,
+    # so since I'm relying on the globals.json file i could just use it to
+    # hold the api key.
+
     # verify globals.json exists
     populate_globals()
 
@@ -77,11 +85,11 @@ def code_edit(prompt):
     # Read the contents of the prompt file
     with open(prompt, "r") as f:
         prompt_text = f.read()
-    print(prompt_text)
+    # print(prompt_text)
 
     # Use the OpenAI API to generate code based on the prompt
     response = openai.Completion.create(
-        engine="code-davinci-001", prompt=prompt_text, max_tokens=1012, temperature=0.2, stop="\n"
+        engine="code-davinci-002", prompt=prompt_text, max_tokens=1024, temperature=0.2
     )
 
     # Get the generated code from the response
@@ -101,8 +109,19 @@ def code_edit(prompt):
         json.dump(data, f)
 
     # Save the generated code to a file
-    with open(prompt, "w") as f:
+    basename = os.path.basename(prompt).split(".")
+    if len(basename) > 1:
+        ext = basename[1]
+    else:
+        ext = basename[0]
+
+    new_filename = f'{prompt}_edited.{ext}'
+    with open(new_filename, "w") as f:
         f.write(generated_code)
+
+    if click.confirm("Would you like to overwrite the original file with the response?", default=False):
+        with open(prompt, "w") as f:
+            f.write(generated_code)
 
     return
 
