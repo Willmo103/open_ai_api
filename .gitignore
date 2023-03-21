@@ -4,4 +4,4 @@
 !setup.py
 !*.py
 !*.db
-
+!requirements.txt
