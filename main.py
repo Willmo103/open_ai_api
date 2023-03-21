@@ -4,7 +4,6 @@ import os
 import json
 import openai
 import click
-from dotenv import load_dotenv
 
 def populate_globals():
 
@@ -58,6 +57,7 @@ def create_directory_structure(data, path):
 
 @click.command()
 @click.argument("prompt", type=click.Path(exists=True))
+@click.argument("-s", "--size", default=)
 def code_edit(prompt):
 
     # I was having trouble trying to pull the variables from the .env file,
