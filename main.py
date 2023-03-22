@@ -4,33 +4,8 @@ import os
 import json
 import openai
 import click
+from globals import globals
 
-def populate_globals():
-
-    # get the root install path to generate/look for globals.json
-    path: str = os.path.dirname(__file__) + os.path.sep + "globals.json"
-
-    # keys is a list of all the keys that need to be present in the json object
-    keys: list = ["ignore", "requests", "API_KEY", "ORG_KEY"]
-    defaults: dict = {"ignore": [], "requests": []}
-
-    # read the object make sure all keys are present
-    try:
-        with open(path, "r") as f:
-            data = json.load(f)
-        assert all(key in data for key in keys)
-        return
-    except (FileNotFoundError, json.JSONDecodeError):
-        print("No globals.json file found, generating globals.json...")
-        data = defaults.copy()
-        data["API_KEY"] = input("Enter your openai API key: 'sk-...'\n> ")
-        data["ORG_KEY"] = input("Enter your openai ORG key: 'org-...'\n> ")
-
-        with open(path, "w") as f:
-            json.dump(data, f, indent=4)
-
-        print("globals.json created:\n", json.dumps(data, indent=4))
-        return
 
 
 def remove_pwd(path):
@@ -57,7 +32,7 @@ def create_directory_structure(data, path):
 
 @click.command()
 @click.argument("prompt", type=click.Path(exists=True))
-@click.argument("-s", "--size", default=)
+# @click.argument("-s", "--size", default=)
 def code_edit(prompt):
 
     # I was having trouble trying to pull the variables from the .env file,
@@ -76,11 +51,11 @@ def code_edit(prompt):
     openai.organization = data["ORG_KEY"]
 
     # uncomment to get the list of models saved locally
-    # if openai.api_key:
-    #     data = openai.Model.list()
-    #     with open("models.json", 'w') as f:
-    #         json.dump(data, f, indent=4)
-    #     return
+    if openai.api_key:
+        data = openai.Model.list()
+        with open("models.json", 'w') as f:
+            json.dump(data, f, indent=4)
+        return
 
     # Read the contents of the prompt file
     with open(prompt, "r") as f:
@@ -284,3 +259,9 @@ def generate_directory(json_obj, path):
         data = json.load(f)
     create_directory_structure(data, path)
     click.echo(f"Directory structure generated at {path}")
+
+
+@click.command()
+def list_models():
+    try:
+        with open("models.json", "r")
