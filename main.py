@@ -47,8 +47,10 @@ def code_edit(prompt):
         data = json.load(f)
 
     # Set the environment variables from .env file
-    openai.api_key = data["API_KEY"]
-    openai.organization = data["ORG_KEY"]
+    # openai.api_key = data["API_KEY"]
+    openai.api_key = globals.api()
+    # openai.organization = data["ORG_KEY"]
+    openai.organization = globals.org()
 
     # uncomment to get the list of models saved locally
     if openai.api_key:
