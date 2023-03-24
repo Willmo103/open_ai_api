@@ -1,5 +1,6 @@
 import json
 import os
+import openai
 
 
 class Globals:
@@ -46,6 +47,12 @@ class Globals:
 
             print("globals saved")
             return
+
+    def fetch_models(self):
+        openai.api_key = self._API_KEY
+        openai.org_key = self._ORG_KEY
+        r_models = openai.Model.list()
+
 
     def api(self) -> str:
         return self._API_KEY

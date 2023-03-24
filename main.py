@@ -39,13 +39,6 @@ def code_edit(prompt):
     # so since I'm relying on the globals.json file i could just use it to
     # hold the api key.
 
-    # verify globals.json exists
-    populate_globals()
-
-    # load env
-    with open("globals.json", "r") as f:
-        data = json.load(f)
-
     # Set the environment variables from .env file
     # openai.api_key = data["API_KEY"]
     openai.api_key = globals.api()
@@ -265,5 +258,4 @@ def generate_directory(json_obj, path):
 
 @click.command()
 def list_models():
-    try:
-        with open("models.json", "r")
+    ...
